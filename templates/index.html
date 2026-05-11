@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>動物聲音辨識系統 | Animal Sound Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080c14;
+    --surface:  #0f1929;
+    --border:   #1e3a5f;
+    --accent:   #00d4ff;
+    --accent2:  #7c3aed;
+    --green:    #00ff88;
+    --warn:     #f59e0b;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --radius:   12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── Grid background ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* ─── Header ─── */
+  header {
+    position: relative; z-index: 10;
+    padding: 24px 40px;
+    display: flex; align-items: center; gap: 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,12,20,.9);
+    backdrop-filter: blur(20px);
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.3rem; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(0,212,255,.5);
+  }
+  .logo span { color: var(--text); }
+  .subtitle {
+    font-size: .8rem; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    margin-left: auto;
+    letter-spacing: 1px;
+  }
+
+  /* ─── Layout ─── */
+  .container {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 0 auto;
+    padding: 40px 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 768px) {
+    .container { grid-template-columns: 1fr; padding: 20px 16px; }
+    header { padding: 16px 20px; }
+  }
+
+  /* ─── Card ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: .6;
+  }
+  .card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: .75rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 3px;
+    text-transform: uppercase; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before {
+    content: '▸'; font-size: .9rem;
+  }
+
+  /* ─── Upload zone ─── */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .3s;
+    background: rgba(0,212,255,.02);
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,212,255,.06);
+    box-shadow: 0 0 30px rgba(0,212,255,.1);
+  }
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+  .drop-icon { font-size: 3rem; margin-bottom: 12px; }
+  .drop-text { color: var(--muted); font-size: .9rem; line-height: 1.6; }
+  .drop-text strong { color: var(--accent); }
+
+  /* ─── Buttons ─── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px; border: none;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: .9rem; font-weight: 500;
+    cursor: pointer; transition: all .2s;
+  }
+  .btn-primary {
+    background: var(--accent); color: #000;
+    box-shadow: 0 0 20px rgba(0,212,255,.3);
+  }
+  .btn-primary:hover { box-shadow: 0 0 30px rgba(0,212,255,.5); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn-danger {
+    background: #ef4444; color: #fff;
+    box-shadow: 0 0 20px rgba(239,68,68,.3);
+  }
+  .btn-danger:hover { box-shadow: 0 0 30px rgba(239,68,68,.5); transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ─── Record section ─── */
+  .record-section { margin-top: 24px; }
+  .record-controls {
+    display: flex; gap: 12px; align-items: center;
+    flex-wrap: wrap; margin-top: 12px;
+  }
+  .record-timer {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem; color: var(--accent);
+    min-width: 60px;
+  }
+  .pulse-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%; background: #ef4444;
+    animation: pulse 1s infinite;
+    display: none;
+  }
+  .pulse-dot.active { display: block; }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .5; transform: scale(1.3); }
+  }
+
+  /* ─── Audio player ─── */
+  .audio-preview { margin-top: 16px; }
+  audio { width: 100%; border-radius: 8px; }
+
+  /* ─── Analyze button ─── */
+  .analyze-wrap { margin-top: 20px; display: flex; gap: 12px; }
+
+  /* ─── Loading ─── */
+  .loading {
+    display: none; flex-direction: column; align-items: center;
+    gap: 16px; padding: 48px 0;
+  }
+  .loading.active { display: flex; }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: 'Space Mono', monospace;
+    color: var(--muted); font-size: .85rem;
+    letter-spacing: 1px;
+  }
+
+  /* ─── Results ─── */
+  .results { display: none; }
+  .results.active { display: block; }
+
+  /* ─── Top prediction ─── */
+  .top-pred {
+    text-align: center; padding: 32px;
+    background: linear-gradient(135deg,
+      rgba(0,212,255,.08), rgba(124,58,237,.08));
+    border-radius: var(--radius);
+    border: 1px solid rgba(0,212,255,.2);
+    margin-bottom: 20px;
+  }
+  .animal-emoji { font-size: 4rem; margin-bottom: 8px; display: block; }
+  .animal-name { font-size: 2rem; font-weight: 700; color: var(--accent); }
+
+
+
+
+  /* ─── Spectrogram ─── */
+  .spec-img {
+    width: 100%; border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+
+  /* ─── Features table ─── */
+  .feat-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-top: 12px;
+  }
+  .feat-item {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+  }
+  .feat-key {
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem; color: var(--muted);
+    letter-spacing: 1px; margin-bottom: 4px;
+  }
+  .feat-val { font-size: 1rem; font-weight: 600; color: var(--accent); }
+
+  /* ─── Status bar ─── */
+  .status-bar {
+    font-family: 'Space Mono', monospace;
+    font-size: .75rem; color: var(--muted);
+    padding: 8px 0; border-top: 1px solid var(--border);
+    margin-top: 16px; letter-spacing: 1px;
+  }
+  .status-ok { color: var(--green); }
+  .status-err { color: #ef4444; }
+
+  /* Full-width result area */
+  .col-full { grid-column: 1 / -1; }
+</style>
+</head>
+
+<body>
+<header>
+  <div>
+    <div class="logo">ANIMAL<span>.</span>AI</div>
+  </div>
+  <div class="subtitle">深度學習 × 生物聲學辨識系統 &nbsp;|&nbsp; CNN + LLM</div>
+</header>
+
+<div class="container">
+
+  <!-- ─── 左欄：輸入 ─── -->
+  <div>
+
+    <!-- 上傳音檔 -->
+    <div class="card">
+      <div class="card-title">上傳音檔</div>
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="audio/*">
+        <div class="drop-icon">🎵</div>
+        <div class="drop-text">
+          <strong>點擊選擇</strong>或拖放音檔至此<br>
+          支援 WAV、MP3、OGG、FLAC、M4A
+        </div>
+      </div>
+
+      <div class="audio-preview" id="uploadPreview" style="display:none">
+        <audio id="uploadPlayer" controls></audio>
+        <div class="status-bar status-ok" id="uploadFileName"></div>
+      </div>
+    </div>
+
+    <!-- 錄音 -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">即時錄音</div>
+      <div class="drop-text" style="margin-bottom:16px">
+        按下錄音後對準麥克風發出動物聲音，最多錄製 10 秒
+      </div>
+      <div class="record-controls">
+        <button class="btn btn-danger" id="recordBtn" onclick="toggleRecord()">
+          ⏺ 開始錄音
+        </button>
+        <div class="pulse-dot" id="pulseDot"></div>
+        <div class="record-timer" id="timer">0:00</div>
+      </div>
+      <div class="audio-preview" id="recordPreview" style="display:none;margin-top:16px">
+        <audio id="recordPlayer" controls></audio>
+        <div class="status-bar status-ok">錄音完成，可點擊分析</div>
+      </div>
+    </div>
+
+    <!-- 分析按鈕 -->
+    <div class="analyze-wrap">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()" disabled>
+        🔍 開始分析
+      </button>
+      <button class="btn btn-outline" onclick="resetAll()">↺ 重置</button>
+    </div>
+
+    <div class="status-bar" id="statusBar">等待音訊輸入...</div>
+  </div>
+
+  <!-- ─── 右欄：結果 ─── -->
+  <div>
+    <!-- Loading -->
+    <div class="card loading" id="loadingBox">
+      <div class="spinner"></div>
+      <div class="loading-text">分析音訊中，請稍候...</div>
+    </div>
+
+    <!-- Results -->
+    <div class="results" id="resultsBox">
+
+      <!-- CNN 主結果 -->
+      <div class="card">
+        <div class="card-title">CNN 辨識結果</div>
+        <div class="top-pred">
+          <span class="animal-emoji" id="resEmoji">—</span>
+          <div class="animal-name" id="resName">—</div>
+
+        </div>
+
+      </div>
+
+      <!-- 音訊特徵 -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-title">音訊特徵</div>
+        <div class="feat-grid" id="featGrid"></div>
+      </div>
+
+    </div><!-- /results -->
+
+    <!-- 預設空白提示 -->
+    <div class="card" id="placeholder" style="text-align:center;padding:60px 24px">
+      <div style="font-size:3rem;margin-bottom:16px">🐾</div>
+      <div style="color:var(--muted);font-size:.9rem;line-height:1.8">
+        上傳音檔或錄製聲音後<br>點擊「開始分析」即可辨識動物
+      </div>
+    </div>
+  </div><!-- /right col -->
+
+  <!-- ─── 全寬：頻譜圖 ─── -->
+  <div class="col-full results" id="spectrogramSection">
+    <div class="card">
+      <div class="card-title">頻譜圖視覺化</div>
+      <img class="spec-img" id="specImg" src="" alt="Mel Spectrogram">
+      <div class="card-title" style="margin-top:16px">波形圖</div>
+      <img class="spec-img" id="waveImg" src="" alt="Waveform">
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ─── 狀態 ───────────────────────────────────────────────────────────────
+let audioBlob   = null;   // 最終要送出的音訊 Blob
+let mediaRec    = null;
+let recording   = false;
+let timerHandle = null;
+let seconds     = 0;
+let chunks      = [];
+
+const EMOJI_MAP = {
+  dog:'🐕', cat:'🐈', bird:'🐦', sheep:'🐑'
+};
+
+// ─── 上傳音檔 ────────────────────────────────────────────────────────────
+const fileInput  = document.getElementById('fileInput');
+const dropZone   = document.getElementById('dropZone');
+
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setUploadFile(file);
+});
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault(); dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) setUploadFile(file);
+});
+
+function setUploadFile(file) {
+  audioBlob = file;
+  const url = URL.createObjectURL(file);
+  document.getElementById('uploadPlayer').src = url;
+  document.getElementById('uploadFileName').textContent = `📁 ${file.name}  (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById('uploadPreview').style.display = 'block';
+  enableAnalyze();
+}
+
+// ─── 錄音 ─────────────────────────────────────────────────────────────────
+async function toggleRecord() {
+  if (!recording) {
+    await startRecord();
+  } else {
+    stopRecord();
+  }
+}
+
+async function startRecord() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+
+    // 優先選用後端可直接解析的格式（WAV > OGG > MP4 > WebM）
+    const PREFERRED = [
+      'audio/wav',
+      'audio/ogg; codecs=opus',
+      'audio/ogg',
+      'audio/mp4',
+      'audio/webm; codecs=opus',
+      'audio/webm',
+    ];
+    const mimeType = PREFERRED.find(m => MediaRecorder.isTypeSupported(m)) || '';
+    console.log('[record] 使用格式：', mimeType || '（瀏覽器預設）');
+
+    mediaRec = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    mediaRec.ondataavailable = e => chunks.push(e.data);
+    mediaRec.onstop = () => {
+      const blobType = mimeType || 'audio/webm';
+      audioBlob = new Blob(chunks, { type: blobType });
+      const url = URL.createObjectURL(audioBlob);
+      document.getElementById('recordPlayer').src = url;
+      document.getElementById('recordPreview').style.display = 'block';
+      enableAnalyze();
+      stream.getTracks().forEach(t => t.stop());
+    };
+    mediaRec.start();
+    recording = true;
+    seconds   = 0;
+    document.getElementById('recordBtn').textContent = '⏹ 停止錄音';
+    document.getElementById('recordBtn').className = 'btn btn-outline';
+    document.getElementById('pulseDot').classList.add('active');
+    timerHandle = setInterval(() => {
+      seconds++;
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      document.getElementById('timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+      if (seconds >= 10) stopRecord();
+    }, 1000);
+  } catch(err) {
+    alert('無法存取麥克風：' + err.message);
+  }
+}
+
+function stopRecord() {
+  if (!recording) return;
+  clearInterval(timerHandle);
+  mediaRec.stop();
+  recording = false;
+  document.getElementById('recordBtn').textContent = '⏺ 開始錄音';
+  document.getElementById('recordBtn').className = 'btn btn-danger';
+  document.getElementById('pulseDot').classList.remove('active');
+}
+
+// ─── 分析 ─────────────────────────────────────────────────────────────────
+function enableAnalyze() {
+  document.getElementById('analyzeBtn').disabled = false;
+  setStatus('音訊已就緒，點擊「開始分析」', 'ok');
+}
+
+async function analyze() {
+  if (!audioBlob) return;
+
+  // 顯示 loading
+  document.getElementById('loadingBox').classList.add('active');
+  document.getElementById('resultsBox').classList.remove('active');
+  document.getElementById('spectrogramSection').classList.remove('active');
+  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('analyzeBtn').disabled = true;
+  setStatus('分析中...', '');
+
+  try {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.webm');
+
+    const res  = await fetch('/api/predict', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    document.getElementById('loadingBox').classList.remove('active');
+
+    if (!data.success) {
+      setStatus(`錯誤：${data.error}`, 'err');
+      document.getElementById('placeholder').style.display = 'block';
+      return;
+    }
+
+    renderResults(data);
+    setStatus('分析完成 ✓', 'ok');
+  } catch(err) {
+    document.getElementById('loadingBox').classList.remove('active');
+    document.getElementById('placeholder').style.display = 'block';
+    setStatus(`請求失敗：${err.message}`, 'err');
+  }
+
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+// ─── 渲染結果 ─────────────────────────────────────────────────────────────
+function renderResults(data) {
+  const { cnn, llm, spectrogram, waveform, features } = data;
+
+  // 頂部結果
+  const emoji = EMOJI_MAP[cnn.top_class] || '🐾';
+  document.getElementById('resEmoji').textContent = emoji;
+  document.getElementById('resName').textContent  = cnn.top_class_zh;
+
+
+
+  // 音訊特徵
+  const featGrid = document.getElementById('featGrid');
+  featGrid.innerHTML = '';
+  const featItems = [
+    { key: 'F0 基頻',   val: features.f0_hz   ? features.f0_hz.toFixed(1) + ' Hz' : 'N/A' },
+    { key: 'RMS 能量',  val: features.rms      ? features.rms.toFixed(4)            : 'N/A' },
+    { key: '過零率 ZCR', val: features.zcr      ? features.zcr.toFixed(4)            : 'N/A' },
+    { key: '頻譜重心',  val: features.sc_hz    ? features.sc_hz.toFixed(0) + ' Hz'  : 'N/A' },
+    { key: '音訊長度',  val: features.duration_s ? features.duration_s.toFixed(2) + ' s' : 'N/A' },
+    { key: '分類類別',  val: cnn.top_class_zh },
+  ];
+  featItems.forEach(({ key, val }) => {
+    const div = document.createElement('div');
+    div.className = 'feat-item';
+    div.innerHTML = `<div class="feat-key">${key}</div><div class="feat-val">${val}</div>`;
+    featGrid.appendChild(div);
+  });
+
+  // 頻譜圖 & 波形
+  if (spectrogram) {
+    document.getElementById('specImg').src = 'data:image/png;base64,' + spectrogram;
+  }
+  if (waveform) {
+    document.getElementById('waveImg').src = 'data:image/png;base64,' + waveform;
+  }
+
+  // 顯示
+  document.getElementById('resultsBox').classList.add('active');
+  document.getElementById('spectrogramSection').classList.add('active');
+}
+
+// ─── 工具 ─────────────────────────────────────────────────────────────────
+function setStatus(msg, type) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+  el.className = 'status-bar' + (type === 'ok' ? ' status-ok' : type === 'err' ? ' status-err' : '');
+}
+
+function resetAll() {
+  audioBlob = null;
+  if (recording) stopRecord();
+  fileInput.value = '';
+  document.getElementById('uploadPreview').style.display  = 'none';
+  document.getElementById('recordPreview').style.display  = 'none';
+  document.getElementById('resultsBox').classList.remove('active');
+  document.getElementById('spectrogramSection').classList.remove('active');
+  document.getElementById('loadingBox').classList.remove('active');
+  document.getElementById('placeholder').style.display = 'block';
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('timer').textContent = '0:00';
+  setStatus('等待音訊輸入...', '');
+}
+</script>
+</body>
+</html>
