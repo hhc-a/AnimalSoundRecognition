@@ -187,7 +187,7 @@ def train():
     model.summary()
 
     callbacks = [
-        ModelCheckpoint(MODEL_PATH, monitor='val_accuracy', save_best_only=True, verbose=1, save_format='h5'),
+        ModelCheckpoint(MODEL_PATH, monitor='val_accuracy', save_best_only=True, verbose=1),
         EarlyStopping(monitor='val_accuracy', patience=12, restore_best_weights=True, verbose=1),
         ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-6, verbose=1),
     ]
@@ -198,8 +198,8 @@ def train():
 
     # ── Phase 2：微調 ────────────────────────────────────────────────────
     print("\n[Phase 2] 微調（解凍 MobileNetV2 後 50 層）...")
-    # 用名稱找 backbone，避免層索引因架構改變而錯誤
-    base_model = model.get_layer('mobilenetv2_backbone')
+    # 找 MobileNetV2 backbone（用 type 找，不依賴名稱）
+    base_model = next(l for l in model.layers if 'mobilenetv2' in l.name.lower())
     base_model.trainable = True
     for layer in base_model.layers[:-50]:
         layer.trainable = False
