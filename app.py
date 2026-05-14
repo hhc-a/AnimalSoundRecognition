@@ -18,20 +18,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'          # 關閉 TF 詳細 log
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 from audio_processor import full_pipeline
-from model import load_model, predict_from_array, CLASSES, CLASS_ZH
+from model import load_model, predict_from_array, CLASSES, CLASS_ZH, MODEL_PATH
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB 上限
 
 # ─── 全域載入模型（啟動時一次）─────────────────────────────────────────
-print("[app] 載入 CNN 模型中...")
-MODEL_FILE = "animal_cnn_model.h5"
-if not os.path.exists(MODEL_FILE):
-    print(f"[警告] 找不到 {MODEL_FILE}，請將訓練好的模型上傳至 GitHub")
-    cnn_model = None
-else:
-    cnn_model = load_model()
-    print("[app] 模型載入完成")
+print("[app] 載入 ONNX 模型中...")
+cnn_model = load_model()
 
 
 # ─── 路由 ─────────────────────────────────────────────────────────────────
