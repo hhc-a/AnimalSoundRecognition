@@ -20,7 +20,7 @@ DURATION    = 4.0         # 每段音訊長度（秒）
 N_MELS      = 128         # Mel 頻帶數量
 HOP_LENGTH  = 512
 N_FFT       = 2048
-IMG_SIZE    = 224         # CNN 輸入尺寸
+IMG_SIZE    = 96          # CNN 輸入尺寸（縮小以節省 Render 記憶體）
 
 
 # ─── 工具函式 ─────────────────────────────────────

@@ -24,7 +24,7 @@ CLASS_ZH = {
 }
 
 MODEL_PATH = "animal_cnn_model.h5"
-IMG_SIZE   = 224
+IMG_SIZE   = 96
 
 
 # ─── CNN 模型建立 ─────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ def build_cnn_model(num_classes: int = len(CLASSES)):
     - 使用預訓練的 MobileNetV2 作為 backbone（Transfer Learning）
     - 加入自訂分類頭，適應動物聲音頻譜圖分類任務
     架構說明：
-        Input (224×224×3)
+        Input (96×96×3)
         → MobileNetV2 (pretrained ImageNet, frozen)
         → GlobalAveragePooling2D
         → Dense(256) + BatchNorm + Dropout(0.5)
@@ -48,7 +48,8 @@ def build_cnn_model(num_classes: int = len(CLASSES)):
     base_model = tf.keras.applications.MobileNetV2(
         input_shape=(IMG_SIZE, IMG_SIZE, 3),
         include_top=False,
-        weights='imagenet'
+        weights='imagenet',
+        alpha=0.35
     )
     base_model._name = 'mobilenetv2_backbone'
     # 凍結底層，只訓練分類頭
