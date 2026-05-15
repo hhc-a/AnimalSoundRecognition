@@ -29,7 +29,43 @@ from audio_processor import (
     reduce_noise, trim_silence,
     SAMPLE_RATE, DURATION
 )
-from model import build_cnn_model, CLASSES, MODEL_PATH
+from model import CLASSES
+
+MODEL_PATH = "animal_cnn_model.h5"
+
+def build_cnn_model(num_classes=len(CLASSES)):
+    import tensorflow as tf
+    from tensorflow.keras import layers, models
+    IMG_SIZE = 96
+    base_model = tf.keras.applications.MobileNetV2(
+        input_shape=(IMG_SIZE, IMG_SIZE, 3),
+        include_top=False,
+        weights='imagenet',
+        alpha=0.35
+    )
+    base_model._name = 'mobilenetv2_backbone'
+    base_model.trainable = False
+
+    inputs = tf.keras.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
+    x = base_model(inputs, training=False)
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dense(256)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Dropout(0.5)(x)
+    x = layers.Dense(128)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Dropout(0.3)(x)
+    outputs = layers.Dense(num_classes, activation='softmax')(x)
+
+    model = models.Model(inputs, outputs)
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+    return model
 
 DATA_DIR         = "data"
 BATCH_SIZE       = 16     # 資料少時用小 batch
