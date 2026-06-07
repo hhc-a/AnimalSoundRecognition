@@ -15,7 +15,7 @@ animal_sound_classifier/
 ├── requirements.txt     # 套件清單
 ├── templates/
 │   └── index.html       # 前端介面
-└── data/                # ← 請自行建立，放訓練資料
+└── data/                # 放訓練資料
     ├── dog/
     ├── cat/
     ├── bird/
@@ -55,7 +55,7 @@ animal_sound_classifier/
 
 ## 安裝步驟
 
-### 1. 建立虛擬環境（建議）
+### 1. 建立虛擬環境
 ```bash
 python -m venv venv
 
@@ -92,10 +92,9 @@ sudo apt install ffmpeg
 
 推薦資料集（免費）：
 - **Kaggle Animal Sounds**：https://www.kaggle.com/datasets/caoofficial/animal-sounds
-- **ESC-50**：https://github.com/karolpiczak/ESC-50
 - **Freesound**：https://freesound.org
 
-將音檔放入對應資料夾，每類建議至少 **30 個音檔**（訓練腳本會自動增強到約 180 張）。
+將音檔放入對應資料夾，每類至少 **50 個音檔**（訓練腳本會自動增強到約 180 張）。
 
 ---
 
@@ -146,10 +145,5 @@ python app.py
 
 ---
 
-## 新增動物類別
-
-1. 在 `model.py` 的 `CLASSES` 和 `CLASS_ZH` 新增對應條目
-2. 在 `data/` 新增對應子目錄並放入音檔
-3. 在 `templates/index.html` 的 `EMOJI_MAP` 新增 emoji
-4. 刪除舊的 `animal_cnn_model.keras`
-5. 重新執行 `python train_model.py`
+1. 刪除舊的 `animal_cnn_model.keras`
+2. 重新執行 `python train_model.py`
